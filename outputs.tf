@@ -37,3 +37,19 @@ output "dashboard_token" {
   value       = kubernetes_secret.headlamp_admin_token.data["token"]
   sensitive   = true
 }
+
+output "keycloak_url" {
+  description = "HTTPS URL of Keycloak (admin console at /admin; realm git-deploy)"
+  value       = "https://${local.keycloak_host}/"
+}
+
+output "keycloak_admin_password" {
+  description = "Bootstrap password of the Keycloak 'admin' console user"
+  value       = random_password.keycloak_admin.result
+  sensitive   = true
+}
+
+output "gitdeploy_url" {
+  description = "HTTPS URL of the git-deploy API/UI (OIDC-authenticated via oauth2-proxy)"
+  value       = "https://${local.gitdeploy_host}/"
+}

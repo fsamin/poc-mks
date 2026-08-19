@@ -53,7 +53,10 @@ charts/cluster-issuer/       # mini local Helm chart carrying the ClusterIssuer
 dns.tf                       # A records in the existing OVH DNS zone
 helloworld.tf                # namespace / deployment / service / ingress (TLS)
 headlamp.tf                  # admin dashboard: Headlamp + admin token + allowlisted ingress
-outputs.tf                   # kubeconfig, LB IP, gateway egress IP, app URL
+keycloak.tf                  # IdP of the git-deploy platform: 1 replica, H2 on PVC, realm import
+templates/keycloak-realm.json.tpl  # versioned realm (roles, clients, mappers; secrets injected at apply)
+git-deploy-gateway.tf        # oauth2-proxy in front of the git-deploy API/UI + operator's Keycloak Secret
+outputs.tf                   # kubeconfig, LB IP, gateway egress IP, app URLs, admin credentials
 ```
 
 ## Prerequisites
@@ -200,6 +203,51 @@ Caveats:
   amphora IPs from the private subnet.
 - Headlamp is the dashboard officially recommended by the Kubernetes project
   since kubernetes-dashboard was retired (archived January 2026).
+
+## git-deploy platform (Keycloak + oauth2-proxy + operator)
+
+The [git-deploy-operator](https://github.com/fsamin/git-deploy-operator) PoC —
+a "git push to deploy" platform whose users have **no access to the cluster** —
+is hosted here with Keycloak as IdP and authorization source:
+
+- **Keycloak** at `https://keycloak.<subzone>.<zone>/` (console: `admin` /
+  `terraform output -raw keycloak_admin_password`). Realm `git-deploy`,
+  imported at startup from `templates/keycloak-realm.json.tpl`: realm role
+  `git-deploy-admin`, group `/tenants` (children created by the operator),
+  clients `git-deploy-cli` (public, device flow), `oauth2-proxy`
+  (confidential) and `git-deploy-operator` (service account with
+  `manage-users`, for tenant-group provisioning). PoC sizing: one replica,
+  dev-mode H2 persisted on a PVC — `--import-realm` never overwrites an
+  existing realm, so console changes survive restarts.
+- **oauth2-proxy** at `https://git-deploy.<subzone>.<zone>/` is the only entry
+  to the operator's API/UI: it handles the browser session and forwards the
+  OIDC token as a bearer header; CLI requests with a valid JWT pass through.
+  The operator validates the JWT itself on every request — the proxy is
+  browser plumbing, not the security boundary.
+- **Operator deployment** (from the operator repo, once the image is in a
+  registry the cluster can pull):
+
+  ```sh
+  make deploy \
+    OVERLAY=config/no-api-ingress \
+    OIDC_ISSUER=https://keycloak.<subzone>.<zone>/realms/git-deploy \
+    KEYCLOAK_URL=https://keycloak.<subzone>.<zone> \
+    INGRESS_CLASS=nginx BASE_DOMAIN=<subzone>.<zone> \
+    IMG=… REGISTRY=…
+  ```
+
+  `config/no-api-ingress` matters: the operator's own plain Ingress would
+  bypass oauth2-proxy. The manager's Keycloak credentials land in the
+  `keycloak-admin` Secret of `git-deploy-operator-system`, created here so it
+  exists before the first `make deploy`.
+- **Onboarding**: create users in the Keycloak console; an admin runs
+  `git-deploy tenant create <name>` (namespace + `/tenants/<name>` group),
+  then add the users to the group. See the operator's
+  `docs/authentication.md` for the full model.
+- Both hostnames resolve through the existing `*.<subzone>` wildcard record —
+  no DNS change was needed. Remaining prerequisites to actually run apps:
+  an image registry reachable from MKS (`AlwaysPullImages` is enforced) and
+  CloudNativePG if the postgres add-on is wanted.
 
 ## Design notes & gotchas
 

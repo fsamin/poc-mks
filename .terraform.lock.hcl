@@ -17,6 +17,14 @@ provider "registry.terraform.io/hashicorp/kubernetes" {
   ]
 }
 
+provider "registry.terraform.io/hashicorp/random" {
+  version     = "3.9.0"
+  constraints = "~> 3.6"
+  hashes = [
+    "h1:UlBuNVuCGJ39tTv2c5gz2NRZnQbXfbIWbTzWcth5o74=",
+  ]
+}
+
 provider "registry.terraform.io/ovh/ovh" {
   version     = "2.19.0"
   constraints = "~> 2.1"

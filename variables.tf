@@ -73,6 +73,18 @@ variable "dns_subzone" {
   default     = "poc"
 }
 
+variable "keycloak_subdomain" {
+  description = "Subdomain for Keycloak (IdP of the git-deploy platform) in the DNS zone"
+  type        = string
+  default     = "keycloak"
+}
+
+variable "gitdeploy_subdomain" {
+  description = "Subdomain for the git-deploy API/UI (behind oauth2-proxy) in the DNS zone"
+  type        = string
+  default     = "git-deploy"
+}
+
 variable "dashboard_allowed_cidrs" {
   description = "Client CIDRs allowed to reach the dashboard ingress (admin allowlist)"
   type        = list(string)
@@ -97,4 +109,8 @@ locals {
   dashboard_subdomain     = "${var.dashboard_subdomain}${local.dns_suffix}"
   helloworld_host         = "${local.helloworld_subdomain}.${var.dns_zone}"
   dashboard_host          = "${local.dashboard_subdomain}.${var.dns_zone}"
+  # Both resolve through the apps wildcard record: no dedicated DNS records
+  # (an explicit node would block wildcard synthesis beneath itself).
+  keycloak_host  = "${var.keycloak_subdomain}${local.dns_suffix}.${var.dns_zone}"
+  gitdeploy_host = "${var.gitdeploy_subdomain}${local.dns_suffix}.${var.dns_zone}"
 }
