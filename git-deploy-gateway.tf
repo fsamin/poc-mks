@@ -151,6 +151,10 @@ resource "kubernetes_ingress_v1" "git_deploy" {
       # cutting them after its default 60s timeouts (same as the dashboard).
       "nginx.ingress.kubernetes.io/proxy-read-timeout" = "3600"
       "nginx.ingress.kubernetes.io/proxy-send-timeout" = "3600"
+      # The oauth2-proxy callback answers with several 4k Set-Cookie headers
+      # (session = Keycloak tokens with groups/roles claims): nginx's default
+      # 4k proxy_buffer_size 502s on "upstream sent too big header".
+      "nginx.ingress.kubernetes.io/proxy-buffer-size" = "32k"
       # No IP allowlist: OIDC is the access control.
     }
   }
