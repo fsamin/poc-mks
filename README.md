@@ -5,7 +5,7 @@ private network with a single egress gateway, an ingress controller, TLS
 certificates from Let's Encrypt, and a demo application proving the whole chain
 works end to end.
 
-## What gets created (13 resources)
+## What gets created (14 resources)
 
 | Layer | Resources |
 |---|---|
@@ -13,7 +13,7 @@ works end to end.
 | Kubernetes | MKS cluster (region `GRA5`, default k8s version), node pool of 3 × `b3-8` |
 | Ingress | `ingress-nginx` (Helm) exposed through an Octavia Public Cloud Load Balancer |
 | TLS | `cert-manager` (Helm) + Let's Encrypt production `ClusterIssuer` (HTTP-01) |
-| DNS | `A` records `helloworld[.<subzone>].<zone>` and `dashboard[.<subzone>].<zone>` → Load Balancer IP, in an existing OVH DNS zone (`var.dns_subzone`, default `poc`, prefixes the records — OVH zones cannot be subzones) |
+| DNS | `A` records `helloworld[.<subzone>].<zone>`, `dashboard[.<subzone>].<zone>` and wildcard `*[.<subzone>].<zone>` → Load Balancer IP, in an existing OVH DNS zone (`var.dns_subzone`, default `poc`, prefixes the records — OVH zones cannot be subzones) |
 | Demo | `helloworld` app (3 replicas of `nginxdemos/hello:plain-text`) served in HTTPS |
 | Admin | **Headlamp** dashboard (bearer-token auth, cluster-admin SA token) behind an **IP-allowlisted** ingress |
 
@@ -131,6 +131,59 @@ kubectl get pods -n helloworld -o wide      # take a pod IP
 kubectl run p2p-test --image=curlimages/curl --restart=Never --attach --rm -q \
   -- -s http://<pod-ip>/
 ```
+
+## Exposing an app in any namespace
+
+A wildcard record `*[.<subzone>].<zone>` points to the Load Balancer IP, so
+`<app>.<namespace>[.<subzone>].<zone>` resolves for **any** namespace without
+touching Terraform (a DNS wildcard synthesizes names of any depth, RFC 4592).
+Deploy a Service, then an Ingress:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hello
+  namespace: demo
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: hello.demo.poc.<zone>
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: hello
+                port:
+                  number: 80
+  tls:
+    - hosts: [hello.demo.poc.<zone>]
+      secretName: hello-tls
+```
+
+cert-manager issues one certificate per host (HTTP-01) as soon as the Ingress
+appears — allow ~1 min. `terraform output apps_url_pattern` recalls the URL
+scheme.
+
+Caveats:
+
+- Namespaces named like an existing record label (`helloworld`, `dashboard`)
+  do **not** resolve under the wildcard: an explicit DNS node blocks wildcard
+  synthesis below itself.
+- The wildcard is open by design: anyone with cluster access can expose a
+  host under it. Exposure is gated by cluster access, not by DNS.
+- Let's Encrypt production rate limits apply (one cert per host, 50
+  certificates per registered domain per week).
+- A per-ingress `whitelist-source-range` does not break HTTP-01: cert-manager
+  creates a separate solver Ingress for `/.well-known/acme-challenge/` that
+  does not carry the annotation (nginx applies allowlists per-location). Never
+  set `acme.cert-manager.io/http01-edit-in-place: "true"` on an allowlisted
+  Ingress and never make the allowlist controller-global — Let's Encrypt does
+  not publish its validator IPs, so they cannot be allowlisted.
 
 ## Admin dashboard (Headlamp)
 

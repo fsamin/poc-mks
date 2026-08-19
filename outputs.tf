@@ -27,6 +27,11 @@ output "dashboard_url" {
   value       = "https://${local.dashboard_host}/"
 }
 
+output "apps_url_pattern" {
+  description = "URL pattern for apps exposed via the wildcard DNS record"
+  value       = "https://<app>.<namespace>${local.dns_suffix}.${var.dns_zone}/"
+}
+
 output "dashboard_token" {
   description = "Long-lived cluster-admin bearer token for Headlamp login"
   value       = kubernetes_secret.headlamp_admin_token.data["token"]

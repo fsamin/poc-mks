@@ -91,9 +91,10 @@ variable "dashboard_allowed_cidrs" {
 }
 
 locals {
-  dns_suffix           = var.dns_subzone == "" ? "" : ".${var.dns_subzone}"
-  helloworld_subdomain = "${var.helloworld_subdomain}${local.dns_suffix}"
-  dashboard_subdomain  = "${var.dashboard_subdomain}${local.dns_suffix}"
-  helloworld_host      = "${local.helloworld_subdomain}.${var.dns_zone}"
-  dashboard_host       = "${local.dashboard_subdomain}.${var.dns_zone}"
+  dns_suffix              = var.dns_subzone == "" ? "" : ".${var.dns_subzone}"
+  apps_wildcard_subdomain = "*${local.dns_suffix}"
+  helloworld_subdomain    = "${var.helloworld_subdomain}${local.dns_suffix}"
+  dashboard_subdomain     = "${var.dashboard_subdomain}${local.dns_suffix}"
+  helloworld_host         = "${local.helloworld_subdomain}.${var.dns_zone}"
+  dashboard_host          = "${local.dashboard_subdomain}.${var.dns_zone}"
 }
