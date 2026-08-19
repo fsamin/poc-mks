@@ -11,9 +11,18 @@ resource "helm_release" "ingress_nginx" {
     controller = {
       service = {
         type = "LoadBalancer"
+        # Required so client source IPs reach nginx (whitelist-source-range ACLs)
+        externalTrafficPolicy = "Local"
         annotations = {
-          "loadbalancer.ovhcloud.com/class" = "octavia" # Public Cloud Load Balancer
+          "loadbalancer.ovhcloud.com/class"                  = "octavia" # Public Cloud Load Balancer
+          "loadbalancer.openstack.org/proxy-protocol"        = "v2"
+          "loadbalancer.openstack.org/enable-health-monitor" = "true"
         }
+      }
+      config = {
+        "use-proxy-protocol" = "true"
+        "real-ip-header"     = "proxy_protocol"
+        "proxy-real-ip-cidr" = var.subnet_cidr # vRack: trusted range = private subnet
       }
     }
   })]

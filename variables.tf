@@ -61,6 +61,30 @@ variable "acme_email" {
   type        = string
 }
 
+variable "dashboard_subdomain" {
+  description = "Subdomain for the admin dashboard in the DNS zone"
+  type        = string
+  default     = "dashboard"
+}
+
+variable "dashboard_allowed_cidrs" {
+  description = "Client CIDRs allowed to reach the dashboard ingress (admin allowlist)"
+  type        = list(string)
+  default = [
+    "109.190.254.34/32", "93.182.196.20/32", "109.190.254.5/32", "192.168.0.0/24",
+    "213.186.33.64/32", "109.190.130.253/32", "91.134.217.6/32", "51.210.35.64/32",
+    "109.190.254.33/32", "79.137.104.241/32", "51.161.75.217/32", "109.190.254.58/32",
+    "109.190.254.57/32", "5.196.197.1/32", "5.39.111.3/32", "109.190.254.61/32",
+    "109.190.254.36/32", "5.39.16.33/32", "51.77.185.156/32", "213.251.182.3/32",
+  ]
+
+  validation {
+    condition     = length(var.dashboard_allowed_cidrs) > 0 && !contains(var.dashboard_allowed_cidrs, "0.0.0.0/0")
+    error_message = "The allowlist must not be empty and must not contain 0.0.0.0/0 (it would disable the ACL)."
+  }
+}
+
 locals {
   helloworld_host = "${var.helloworld_subdomain}.${var.dns_zone}"
+  dashboard_host  = "${var.dashboard_subdomain}.${var.dns_zone}"
 }

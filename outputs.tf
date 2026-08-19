@@ -21,3 +21,14 @@ output "gateway_egress_ip" {
   description = "Public IP of the gateway — the single egress IP for all node/pod outbound traffic"
   value       = try(ovh_cloud_project_gateway.gateway.external_information[0].ips[0].ip, null)
 }
+
+output "dashboard_url" {
+  description = "HTTPS URL of the admin dashboard (IP-allowlisted)"
+  value       = "https://${local.dashboard_host}/"
+}
+
+output "dashboard_token" {
+  description = "Long-lived cluster-admin bearer token for Headlamp login"
+  value       = kubernetes_secret.headlamp_admin_token.data["token"]
+  sensitive   = true
+}

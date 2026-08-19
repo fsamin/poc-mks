@@ -6,3 +6,11 @@ resource "ovh_domain_zone_record" "helloworld" {
   ttl       = 60
   target    = data.kubernetes_service.ingress_nginx_controller.status[0].load_balancer[0].ingress[0].ip
 }
+
+resource "ovh_domain_zone_record" "dashboard" {
+  zone      = var.dns_zone
+  subdomain = var.dashboard_subdomain
+  fieldtype = "A"
+  ttl       = 60
+  target    = data.kubernetes_service.ingress_nginx_controller.status[0].load_balancer[0].ingress[0].ip
+}

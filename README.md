@@ -13,8 +13,9 @@ works end to end.
 | Kubernetes | MKS cluster (region `GRA5`, default k8s version), node pool of 3 × `b3-8` |
 | Ingress | `ingress-nginx` (Helm) exposed through an Octavia Public Cloud Load Balancer |
 | TLS | `cert-manager` (Helm) + Let's Encrypt production `ClusterIssuer` (HTTP-01) |
-| DNS | `A` record `helloworld.<zone>` → Load Balancer IP, in an existing OVH DNS zone |
+| DNS | `A` records `helloworld.<zone>` and `dashboard.<zone>` → Load Balancer IP, in an existing OVH DNS zone |
 | Demo | `helloworld` app (3 replicas of `nginxdemos/hello:plain-text`) served in HTTPS |
+| Admin | **Headlamp** dashboard (bearer-token auth, cluster-admin SA token) behind an **IP-allowlisted** ingress |
 
 ### Network topology
 
@@ -46,11 +47,12 @@ versions.tf                  # providers: ovh ~>2.1, helm ~>3.0, kubernetes ~>2.
 variables.tf                 # region, flavor, node count, subnet, dns zone, acme email
 network.tf                   # private network + subnet + gateway
 kube.tf                      # MKS cluster + fixed 3-node pool
-ingress.tf                   # ingress-nginx helm release + LB service data source
+ingress.tf                   # ingress-nginx helm release (PROXY protocol v2) + LB service data source
 certmanager.tf               # cert-manager + ClusterIssuer (local chart)
 charts/cluster-issuer/       # mini local Helm chart carrying the ClusterIssuer
-dns.tf                       # A record in the existing OVH DNS zone
+dns.tf                       # A records in the existing OVH DNS zone
 helloworld.tf                # namespace / deployment / service / ingress (TLS)
+headlamp.tf                  # admin dashboard: Headlamp + admin token + allowlisted ingress
 outputs.tf                   # kubeconfig, LB IP, gateway egress IP, app URL
 ```
 
@@ -104,6 +106,8 @@ export KUBECONFIG=$PWD/kubeconfig.yaml
 terraform output helloworld_url      # https://helloworld.<zone>/
 terraform output ingress_lb_ip       # Load Balancer public IP
 terraform output gateway_egress_ip   # single egress IP of the cluster
+terraform output dashboard_url       # https://dashboard.<zone>/ (IP-allowlisted)
+terraform output -raw dashboard_token  # bearer token for the Headlamp login screen
 ```
 
 ## Verifying the PoC
@@ -127,6 +131,22 @@ kubectl get pods -n helloworld -o wide      # take a pod IP
 kubectl run p2p-test --image=curlimages/curl --restart=Never --attach --rm -q \
   -- -s http://<pod-ip>/
 ```
+
+## Admin dashboard (Headlamp)
+
+- Reachable at `https://dashboard.<zone>/` **only from the CIDRs in
+  `var.dashboard_allowed_cidrs`** (nginx `whitelist-source-range`, HTTP 403
+  otherwise). The allowlist is per-ingress: `helloworld.<zone>` stays public.
+- Login: bearer token — `terraform output -raw dashboard_token` (long-lived
+  cluster-admin ServiceAccount token; rotate with
+  `terraform apply -replace=kubernetes_secret.headlamp_admin_token`).
+- Client-IP ACLs only work because the Octavia LB speaks **PROXY protocol v2**
+  to ingress-nginx (`loadbalancer.openstack.org/proxy-protocol: "v2"` +
+  `externalTrafficPolicy: Local` + nginx `use-proxy-protocol`). Never add an
+  allowlist annotation without this plumbing: nginx would only ever see
+  amphora IPs from the private subnet.
+- Headlamp is the dashboard officially recommended by the Kubernetes project
+  since kubernetes-dashboard was retired (archived January 2026).
 
 ## Design notes & gotchas
 
