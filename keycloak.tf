@@ -103,6 +103,13 @@ resource "kubernetes_deployment" "keycloak" {
       }
 
       spec {
+        # The image runs as UID 1000 (keycloak); a fresh cinder volume is
+        # root-owned. fsGroup makes kubelet chown the mount, or H2 cannot
+        # create /opt/keycloak/data/h2.
+        security_context {
+          fs_group = 1000
+        }
+
         container {
           name  = "keycloak"
           image = "quay.io/keycloak/keycloak:26.3"
