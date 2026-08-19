@@ -67,6 +67,12 @@ variable "dashboard_subdomain" {
   default     = "dashboard"
 }
 
+variable "dns_subzone" {
+  description = "Optional intermediate label under the OVH zone (e.g. \"poc\" gives helloworld.poc.<zone>). Empty for none. Note: OVH zones cannot be subzones, so this stays a record prefix."
+  type        = string
+  default     = "poc"
+}
+
 variable "dashboard_allowed_cidrs" {
   description = "Client CIDRs allowed to reach the dashboard ingress (admin allowlist)"
   type        = list(string)
@@ -85,6 +91,9 @@ variable "dashboard_allowed_cidrs" {
 }
 
 locals {
-  helloworld_host = "${var.helloworld_subdomain}.${var.dns_zone}"
-  dashboard_host  = "${var.dashboard_subdomain}.${var.dns_zone}"
+  dns_suffix           = var.dns_subzone == "" ? "" : ".${var.dns_subzone}"
+  helloworld_subdomain = "${var.helloworld_subdomain}${local.dns_suffix}"
+  dashboard_subdomain  = "${var.dashboard_subdomain}${local.dns_suffix}"
+  helloworld_host      = "${local.helloworld_subdomain}.${var.dns_zone}"
+  dashboard_host       = "${local.dashboard_subdomain}.${var.dns_zone}"
 }

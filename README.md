@@ -13,7 +13,7 @@ works end to end.
 | Kubernetes | MKS cluster (region `GRA5`, default k8s version), node pool of 3 × `b3-8` |
 | Ingress | `ingress-nginx` (Helm) exposed through an Octavia Public Cloud Load Balancer |
 | TLS | `cert-manager` (Helm) + Let's Encrypt production `ClusterIssuer` (HTTP-01) |
-| DNS | `A` records `helloworld.<zone>` and `dashboard.<zone>` → Load Balancer IP, in an existing OVH DNS zone |
+| DNS | `A` records `helloworld[.<subzone>].<zone>` and `dashboard[.<subzone>].<zone>` → Load Balancer IP, in an existing OVH DNS zone (`var.dns_subzone`, default `poc`, prefixes the records — OVH zones cannot be subzones) |
 | Demo | `helloworld` app (3 replicas of `nginxdemos/hello:plain-text`) served in HTTPS |
 | Admin | **Headlamp** dashboard (bearer-token auth, cluster-admin SA token) behind an **IP-allowlisted** ingress |
 
