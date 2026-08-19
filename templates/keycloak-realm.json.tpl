@@ -88,6 +88,9 @@
       "directAccessGrantsEnabled": false,
       "redirectUris": ["https://${gitdeploy_host}/oauth2/callback"],
       "webOrigins": ["https://${gitdeploy_host}"],
+      "attributes": {
+        "post.logout.redirect.uris": "https://${gitdeploy_host}/*"
+      },
       "protocolMappers": [
         {
           "name": "groups",

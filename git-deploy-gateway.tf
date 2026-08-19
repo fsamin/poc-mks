@@ -81,6 +81,10 @@ resource "kubernetes_deployment" "oauth2_proxy" {
             # a browser whose cookie is still valid.
             "--cookie-refresh=4m",
             "--cookie-secure=true",
+            # Sign-out chains to Keycloak's end-session endpoint (the UI's
+            # /oauth2/sign_out?rd=<keycloak>/... link): allow that redirect,
+            # or the SSO session survives and signs the user right back in.
+            "--whitelist-domain=${local.keycloak_host}",
             # What a client needs before it has a token, plus the probe path.
             "--skip-auth-route=GET=^/healthz$",
             "--skip-auth-route=GET=^/v1/auth/config$",
