@@ -57,6 +57,7 @@ keycloak.tf                  # IdP of the git-deploy platform: 1 replica, H2 on 
 templates/keycloak-realm.json.tpl  # versioned realm (roles, clients, mappers; secrets injected at apply)
 git-deploy-gateway.tf        # oauth2-proxy in front of the git-deploy API/UI + operator's Keycloak Secret
 registry.tf                  # OCI registry for platform-built images (allowlisted, kind-registry pattern)
+cnpg.tf                      # CloudNativePG operator, backing the platform's postgresql add-on
 outputs.tf                   # kubeconfig, LB IP, gateway egress IP, app URLs, admin credentials
 ```
 
@@ -258,8 +259,9 @@ is hosted here with Keycloak as IdP and authorization source:
   then add the users to the group. See the operator's
   `docs/authentication.md` for the full model.
 - The three hostnames resolve through the existing `*.<subzone>` wildcard
-  record — no DNS change was needed. Remaining prerequisite for the postgres
-  add-on only: CloudNativePG.
+  record — no DNS change was needed. CloudNativePG (`cnpg.tf`) backs the
+  platform's `postgresql` add-on: the git-deploy operator creates one CNPG
+  Cluster per add-on and injects its `DATABASE_URL`.
 
 ## Design notes & gotchas
 
