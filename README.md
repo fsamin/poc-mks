@@ -56,6 +56,7 @@ headlamp.tf                  # admin dashboard: Headlamp + admin token + allowli
 keycloak.tf                  # IdP of the git-deploy platform: 1 replica, H2 on PVC, realm import
 templates/keycloak-realm.json.tpl  # versioned realm (roles, clients, mappers; secrets injected at apply)
 git-deploy-gateway.tf        # oauth2-proxy in front of the git-deploy API/UI + operator's Keycloak Secret
+registry.tf                  # OCI registry for platform-built images (allowlisted, kind-registry pattern)
 outputs.tf                   # kubeconfig, LB IP, gateway egress IP, app URLs, admin credentials
 ```
 
@@ -224,8 +225,19 @@ is hosted here with Keycloak as IdP and authorization source:
   OIDC token as a bearer header; CLI requests with a valid JWT pass through.
   The operator validates the JWT itself on every request — the proxy is
   browser plumbing, not the security boundary.
-- **Operator deployment** (from the operator repo, once the image is in a
-  registry the cluster can pull):
+- **OCI registry** at `registry.<subzone>.<zone>`: the destination of the
+  images the platform builds (one per tenant commit), the `kind-registry`
+  pattern elevated to MKS. Anonymous push/pull, gated by an IP allowlist —
+  the gateway egress IP (every node and pod exits through it, so kubelet
+  pulls and buildkit pushes are covered) plus `var.dashboard_allowed_cidrs`.
+  Port 80 is served without the https redirect on purpose: the operator's
+  registry clients are wired for an http registry (`name.Insecure`,
+  `registry.insecure=true`). **Known limit**: tenant pods share that egress
+  IP, so a malicious tenant workload could push/overwrite images —
+  acceptable for the PoC, the fix is an authenticated registry (Harbor) plus
+  credential plumbing in the operator.
+- **Operator deployment** (from the operator repo; only the *operator's own*
+  image needs a public registry, e.g. Docker Hub):
 
   ```sh
   make deploy \
@@ -233,7 +245,8 @@ is hosted here with Keycloak as IdP and authorization source:
     OIDC_ISSUER=https://keycloak.<subzone>.<zone>/realms/git-deploy \
     KEYCLOAK_URL=https://keycloak.<subzone>.<zone> \
     INGRESS_CLASS=nginx BASE_DOMAIN=<subzone>.<zone> \
-    IMG=… REGISTRY=…
+    REGISTRY=registry.<subzone>.<zone> \
+    IMG=docker.io/<user>/git-deploy-operator:<tag>
   ```
 
   `config/no-api-ingress` matters: the operator's own plain Ingress would
@@ -244,10 +257,9 @@ is hosted here with Keycloak as IdP and authorization source:
   `git-deploy tenant create <name>` (namespace + `/tenants/<name>` group),
   then add the users to the group. See the operator's
   `docs/authentication.md` for the full model.
-- Both hostnames resolve through the existing `*.<subzone>` wildcard record —
-  no DNS change was needed. Remaining prerequisites to actually run apps:
-  an image registry reachable from MKS (`AlwaysPullImages` is enforced) and
-  CloudNativePG if the postgres add-on is wanted.
+- The three hostnames resolve through the existing `*.<subzone>` wildcard
+  record — no DNS change was needed. Remaining prerequisite for the postgres
+  add-on only: CloudNativePG.
 
 ## Design notes & gotchas
 

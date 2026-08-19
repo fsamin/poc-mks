@@ -53,3 +53,8 @@ output "gitdeploy_url" {
   description = "HTTPS URL of the git-deploy API/UI (OIDC-authenticated via oauth2-proxy)"
   value       = "https://${local.gitdeploy_host}/"
 }
+
+output "registry_host" {
+  description = "OCI registry for platform-built images (IP-allowlisted; use as REGISTRY= on make deploy)"
+  value       = local.registry_host
+}

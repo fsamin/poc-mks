@@ -85,6 +85,12 @@ variable "gitdeploy_subdomain" {
   default     = "git-deploy"
 }
 
+variable "registry_subdomain" {
+  description = "Subdomain for the OCI registry of platform-built images in the DNS zone"
+  type        = string
+  default     = "registry"
+}
+
 variable "dashboard_allowed_cidrs" {
   description = "Client CIDRs allowed to reach the dashboard ingress (admin allowlist)"
   type        = list(string)
@@ -109,8 +115,9 @@ locals {
   dashboard_subdomain     = "${var.dashboard_subdomain}${local.dns_suffix}"
   helloworld_host         = "${local.helloworld_subdomain}.${var.dns_zone}"
   dashboard_host          = "${local.dashboard_subdomain}.${var.dns_zone}"
-  # Both resolve through the apps wildcard record: no dedicated DNS records
+  # These resolve through the apps wildcard record: no dedicated DNS records
   # (an explicit node would block wildcard synthesis beneath itself).
   keycloak_host  = "${var.keycloak_subdomain}${local.dns_suffix}.${var.dns_zone}"
   gitdeploy_host = "${var.gitdeploy_subdomain}${local.dns_suffix}.${var.dns_zone}"
+  registry_host  = "${var.registry_subdomain}${local.dns_suffix}.${var.dns_zone}"
 }
