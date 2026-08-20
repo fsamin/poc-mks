@@ -179,22 +179,28 @@ Caveats:
 - Namespaces named like an existing record label (`helloworld`, `dashboard`)
   do **not** resolve under the wildcard: an explicit DNS node blocks wildcard
   synthesis below itself.
-- The wildcard is open by design: anyone with cluster access can expose a
-  host under it. Exposure is gated by cluster access, not by DNS.
+- The wildcard resolves any host, but reaching it does not mean being served:
+  the controller-wide allowlist (below) answers 403 to non-admin CIDRs on
+  every Ingress under it.
 - Let's Encrypt production rate limits apply (one cert per host, 50
   certificates per registered domain per week).
-- A per-ingress `whitelist-source-range` does not break HTTP-01: cert-manager
-  creates a separate solver Ingress for `/.well-known/acme-challenge/` that
-  does not carry the annotation (nginx applies allowlists per-location). Never
-  set `acme.cert-manager.io/http01-edit-in-place: "true"` on an allowlisted
-  Ingress and never make the allowlist controller-global — Let's Encrypt does
-  not publish its validator IPs, so they cannot be allowlisted.
+- The allowlist is **controller-global** (`whitelist-source-range` in the
+  ingress-nginx config): every Ingress, present and future, is admin-only
+  unless it overrides the annotation itself. HTTP-01 still works because the
+  ClusterIssuer's solver `ingressTemplate` stamps
+  `whitelist-source-range: 0.0.0.0/0` on the ephemeral challenge Ingresses —
+  Let's Encrypt does not publish its validator IPs, so the challenge path
+  must stay world-reachable. Never set
+  `acme.cert-manager.io/http01-edit-in-place: "true"`: it would serve the
+  challenge through the restricted Ingress instead of the solver's own.
 
 ## Admin dashboard (Headlamp)
 
 - Reachable at `https://dashboard.<zone>/` **only from the CIDRs in
   `var.dashboard_allowed_cidrs`** (nginx `whitelist-source-range`, HTTP 403
-  otherwise). The allowlist is per-ingress: `helloworld.<zone>` stays public.
+  otherwise). Its per-ingress annotation is stricter than the global
+  allowlist: it does not include the gateway egress IP, so in-cluster
+  workloads cannot reach the dashboard.
 - Login: bearer token — `terraform output -raw dashboard_token` (long-lived
   cluster-admin ServiceAccount token; rotate with
   `terraform apply -replace=kubernetes_secret.headlamp_admin_token`).

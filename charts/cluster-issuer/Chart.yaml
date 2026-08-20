@@ -2,4 +2,6 @@ apiVersion: v2
 name: cluster-issuer
 description: Let's Encrypt ClusterIssuer for cert-manager
 type: application
-version: 0.1.0
+# Bump on any template change: helm_release only diffs the chart version for
+# a local chart, not its file contents.
+version: 0.2.0

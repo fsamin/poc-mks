@@ -159,7 +159,8 @@ resource "kubernetes_ingress_v1" "git_deploy" {
       # (session = Keycloak tokens with groups/roles claims): nginx's default
       # 4k proxy_buffer_size 502s on "upstream sent too big header".
       "nginx.ingress.kubernetes.io/proxy-buffer-size" = "32k"
-      # No IP allowlist: OIDC is the access control.
+      # No annotation here: OIDC is the access control, and the
+      # controller-wide allowlist (ingress.tf) restricts reachability anyway.
     }
   }
 

@@ -217,7 +217,8 @@ resource "kubernetes_ingress_v1" "keycloak" {
     namespace = kubernetes_namespace.keycloak.metadata[0].name
     annotations = {
       "cert-manager.io/cluster-issuer" = "letsencrypt-prod"
-      # No IP allowlist: end users must reach the login pages.
+      # No annotation here: the controller-wide allowlist (ingress.tf)
+      # applies — the whole PoC is admin-CIDRs-only, login pages included.
     }
   }
 

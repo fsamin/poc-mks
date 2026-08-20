@@ -191,6 +191,6 @@ resource "kubernetes_ingress_v1" "registry" {
 
   # The hostname resolves through the apps wildcard record; HTTP-01 needs both
   # the record and the issuer. The allowlist does not break the challenge:
-  # cert-manager's solver Ingress is separate and un-annotated.
+  # cert-manager's solver Ingress overrides it (see charts/cluster-issuer).
   depends_on = [helm_release.cluster_issuer, ovh_domain_zone_record.apps_wildcard]
 }

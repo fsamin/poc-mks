@@ -12,3 +12,12 @@ spec:
       - http01:
           ingress:
             ingressClassName: {{ .Values.ingressClassName }}
+            ingressTemplate:
+              metadata:
+                annotations:
+                  # Let's Encrypt validators come from arbitrary IPs: the
+                  # solver Ingress must override the controller-wide
+                  # allowlist or no certificate is ever issued or renewed.
+                  # Only the challenge path is exposed, only for the
+                  # challenge's lifetime.
+                  nginx.ingress.kubernetes.io/whitelist-source-range: "0.0.0.0/0"
