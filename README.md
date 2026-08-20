@@ -246,14 +246,20 @@ is hosted here with Keycloak as IdP and authorization source:
     OIDC_ISSUER=https://keycloak.<subzone>.<zone>/realms/git-deploy \
     KEYCLOAK_URL=https://keycloak.<subzone>.<zone> \
     INGRESS_CLASS=nginx BASE_DOMAIN=<subzone>.<zone> \
+    INGRESS_ANNOTATIONS=cert-manager.io/cluster-issuer=letsencrypt-prod \
+    INGRESS_TLS_SECRET='{app}-tls' \
     REGISTRY=registry.<subzone>.<zone> \
     IMG=docker.io/<user>/git-deploy-operator:<tag>
   ```
 
   `config/no-api-ingress` matters: the operator's own plain Ingress would
-  bypass oauth2-proxy. The manager's Keycloak credentials land in the
-  `keycloak-admin` Secret of `git-deploy-operator-system`, created here so it
-  exists before the first `make deploy`.
+  bypass oauth2-proxy. The two `INGRESS_*` TLS knobs matter too: they put the
+  cluster-issuer annotation and a per-app `spec.tls` secret (`{app}` expands
+  per application) on every app Ingress, so tenant apps get the same
+  per-host Let's Encrypt certificates as `helloworld` — without them the
+  apps are published in plain http. The manager's Keycloak credentials land
+  in the `keycloak-admin` Secret of `git-deploy-operator-system`, created
+  here so it exists before the first `make deploy`.
 - **Onboarding**: create users in the Keycloak console; an admin runs
   `git-deploy tenant create <name>` (namespace + `/tenants/<name>` group),
   then add the users to the group. See the operator's
